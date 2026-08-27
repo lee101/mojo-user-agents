@@ -106,9 +106,9 @@ results and classification predicates before printing.
 
 | case | mojo-user-agents | user-agents | ratio | result |
 |---|---:|---:|---:|---|
-| parse 2,000 unique mixed UAs | 29.62 ms | 2600.51 ms | 87.80x | faster |
-| parse_many 2,000 repeated UAs | 1.46 ms | 17.53 ms | 12.03x | faster |
-| parse one cached UA 2,000 times | 3.25 ms | 15.96 ms | 4.91x | faster |
+| parse 2,000 unique mixed UAs | 64.91 ms | 2149.61 ms | 33.12x | faster |
+| parse_many 2,000 repeated UAs | 0.91 ms | 10.67 ms | 11.78x | faster |
+| parse one cached UA 2,000 times | 1.95 ms | 10.19 ms | 5.24x | faster |
 
 The speedup comes from replacing an ordered scan through hundreds of regular
 expressions with a bounded set of literal token scans for the explicitly
@@ -116,7 +116,14 @@ covered families. Repeated strings reuse a bounded cache of immutable parsed
 components, and duplicate strings in one batch are classified only once. It
 should not be interpreted as equivalent coverage of the full uap-core ruleset.
 
-No GPU, SIMD, or threaded path is included.
+No GPU, SIMD, or threaded path is included. Profiling found no benchmark at
+parity with or slower than upstream; all three are already more than 5x
+faster. The native work is variable-length, branch-heavy byte matching with
+effectively zero floating-point operations per byte, so it has neither a
+float64 SIMD loop to vectorize nor enough arithmetic intensity to justify GPU
+transfer and launch overhead. Threading the small native portion would likewise
+add launch overhead while Python cache lookup and object construction dominate
+the repeated workloads.
 
 ## How it works
 
